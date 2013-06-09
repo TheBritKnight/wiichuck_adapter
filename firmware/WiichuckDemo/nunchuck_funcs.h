@@ -20,7 +20,7 @@
 
 
 
-static uint8_t nunchuck_buf[6];   // array to store nunchuck data,
+static uint8_t nunchuck_data[6];   // array to store nunchuck data,
 
 // Uses port C (analog in) pins as power & ground for Nunchuck
 static void nunchuck_setpowerpins()
@@ -79,9 +79,9 @@ static int nunchuck_get_data()
     while (Wire.available ()) {
         // receive byte as an integer
 #if (ARDUINO >= 100)
-        nunchuck_buf[cnt] = nunchuk_decode_byte( Wire.read() );
+        nunchuck_data[cnt] = nunchuk_decode_byte( Wire.read() );
 #else
-        nunchuck_buf[cnt] = nunchuk_decode_byte( Wire.receive() );
+        nunchuck_data[cnt] = nunchuk_decode_byte( Wire.receive() );
 #endif
         cnt++;
     }
@@ -101,36 +101,36 @@ static int nunchuck_get_data()
 static void nunchuck_print_data()
 { 
     static int i=0;
-    int joy_x_axis = nunchuck_buf[0];
-    int joy_y_axis = nunchuck_buf[1];
-    int accel_x_axis = nunchuck_buf[2]; // * 2 * 2; 
-    int accel_y_axis = nunchuck_buf[3]; // * 2 * 2;
-    int accel_z_axis = nunchuck_buf[4]; // * 2 * 2;
+    int joy_x_axis = nunchuck_data[0];
+    int joy_y_axis = nunchuck_data[1];
+    int accel_x_axis = nunchuck_data[2]; // * 2 * 2; 
+    int accel_y_axis = nunchuck_data[3]; // * 2 * 2;
+    int accel_z_axis = nunchuck_data[4]; // * 2 * 2;
 
     int z_button = 0;
     int c_button = 0;
 
-    // byte nunchuck_buf[5] contains bits for z and c buttons
+    // byte nunchuck_data[5] contains bits for z and c buttons
     // it also contains the least significant bits for the accelerometer data
     // so we have to check each bit of byte outbuf[5]
-    if ((nunchuck_buf[5] >> 0) & 1) 
+    if ((nunchuck_data[5] >> 0) & 1) 
         z_button = 1;
-    if ((nunchuck_buf[5] >> 1) & 1)
+    if ((nunchuck_data[5] >> 1) & 1)
         c_button = 1;
 
-    if ((nunchuck_buf[5] >> 2) & 1) 
+    if ((nunchuck_data[5] >> 2) & 1) 
         accel_x_axis += 1;
-    if ((nunchuck_buf[5] >> 3) & 1)
+    if ((nunchuck_data[5] >> 3) & 1)
         accel_x_axis += 2;
 
-    if ((nunchuck_buf[5] >> 4) & 1)
+    if ((nunchuck_data[5] >> 4) & 1)
         accel_y_axis += 1;
-    if ((nunchuck_buf[5] >> 5) & 1)
+    if ((nunchuck_data[5] >> 5) & 1)
         accel_y_axis += 2;
 
-    if ((nunchuck_buf[5] >> 6) & 1)
+    if ((nunchuck_data[5] >> 6) & 1)
         accel_z_axis += 1;
-    if ((nunchuck_buf[5] >> 7) & 1)
+    if ((nunchuck_data[5] >> 7) & 1)
         accel_z_axis += 2;
 
     Serial.print(i,DEC);
@@ -162,41 +162,56 @@ static void nunchuck_print_data()
 // returns zbutton state: 1=pressed, 0=notpressed
 static int nunchuck_zbutton()
 {
-    return ((nunchuck_buf[5] >> 0) & 1) ? 0 : 1;  // voodoo
+    return ((nunchuck_data[5] >> 0) & 1) ? 0 : 1;  // voodoo
 }
 
 // returns zbutton state: 1=pressed, 0=notpressed
 static int nunchuck_cbutton()
 {
-    return ((nunchuck_buf[5] >> 1) & 1) ? 0 : 1;  // voodoo
+    return ((nunchuck_data[5] >> 1) & 1) ? 0 : 1;  // voodoo
 }
 
 // returns value of x-axis joystick
 static int nunchuck_joyx()
 {
-    return nunchuck_buf[0]; 
+    return nunchuck_data[0]; 
 }
 
 // returns value of y-axis joystick
 static int nunchuck_joyy()
 {
-    return nunchuck_buf[1];
+    return nunchuck_data[1];
 }
 
 // returns value of x-axis accelerometer
 static int nunchuck_accelx()
 {
-    return nunchuck_buf[2];   // FIXME: this leaves out 2-bits of the data
+    int accel_x_axis = nunchuck_data[2]; //Get first part of accelerometer data
+    if ((nunchuck_data[5] >> 2) & 1) //Fill in LSBs from the last byte of the data
+        accel_x_axis += 1;
+    if ((nunchuck_data[5] >> 3) & 1)
+        accel_x_axis += 2;
+    return accel_x_axis;
 }
 
 // returns value of y-axis accelerometer
 static int nunchuck_accely()
 {
-    return nunchuck_buf[3];   // FIXME: this leaves out 2-bits of the data
+    int accel_y_axis = nunchuck_data[3]; //Get first part of accelerometer data
+    if ((nunchuck_data[5] >> 4) & 1) //Fill in LSBs from the last byte of the data
+        accel_y_axis += 1;
+    if ((nunchuck_data[5] >> 5) & 1)
+        accel_y_axis += 2;
+    return accel_y_axis;
 }
 
 // returns value of z-axis accelerometer
 static int nunchuck_accelz()
 {
-    return nunchuck_buf[4];   // FIXME: this leaves out 2-bits of the data
+    int accel_z_axis = nunchuck_data[4]; //Get first part of accelerometer data
+    if ((nunchuck_data[5] >> 6) & 1) //Fill in LSBs from the last byte of the data
+        accel_z_axis += 1;
+    if ((nunchuck_data[5] >> 7) & 1)
+        accel_z_axis += 2;
+    return accel_z_axis;
 }
